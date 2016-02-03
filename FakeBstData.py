@@ -16,7 +16,7 @@ if __name__ == "__main__":
     end = int(time.time())
 
     # Open dumpfile
-    filename = "%d-%s-Location.json" % (end, time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime(end)))
+    filename = "%d-%s-Location.json" % (end, time.strftime('%Y%m%d%H%M%S', time.localtime(end)))
     dumpfile = open(filename, 'w+')
 
     # Generate 100 tuples
