@@ -15,7 +15,13 @@ if __name__ == "__main__":
     start = int(time.mktime(time.strptime("2016-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")))
     end = int(time.time())
 
-    for i in range(100):
+    # Open dumpfile
+    filename = "%d-%s-Location.json" % (end, time.strftime('%Y-%m-%d_%H:%M:%S', time.localtime(end)))
+    dumpfile = open(filename, 'w+')
+
+    # Generate 100 tuples
+    for i in range(10000):
+        # Create tuple data
         T = OrderedDict()
         T['timestamp'] = random.randrange(start, end)
         T['recordtype'] = "Location"
@@ -27,5 +33,10 @@ if __name__ == "__main__":
         T['longitude'] = float(fake.latitude())
         T['accuracy'] = int(random.randrange(0,1000))
         T['age'] = int(random.randrange(0,3600))
-        print(json.dumps(T))
-        # XXX DEBUG: time = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(epoch))
+        
+        # Write data
+        dumpfile.write(json.dumps(T) + '\n')
+ 
+    # Close file
+    dumpfile.close()
+    print(filename)
