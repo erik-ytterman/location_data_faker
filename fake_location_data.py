@@ -1,5 +1,6 @@
 #! /usr/bin/python3
  
+import os
 import time
 import random
 import json
@@ -16,8 +17,9 @@ if __name__ == "__main__":
     end = int(time.time())
 
     # Open dumpfile
-    filename = "%d-%s-Location.json" % (end, time.strftime('%Y%m%d%H%M%S', time.localtime(end)))
+    filename = os.path.join("outdata", "%d-%s-Location.json" % (end, time.strftime('%Y%m%d%H%M%S', time.localtime(end))))
     dumpfile = open(filename, 'w+')
+    print("Creating: " + filename)
 
     # Generate 100 tuples
     for i in range(10000):
