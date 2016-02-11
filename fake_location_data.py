@@ -22,7 +22,8 @@ def random_userdata(n):
     while num < n:
         yield { "userid" : random_base64_md5(), "deviceid" : random_base64_md5() }
         num += 1
- 
+
+# Code partially inspired by http://www.opensource.apple.com/source/python/python-3/python/Lib/gzip.py
 if __name__ == "__main__":
     # Configure
     user_populations = [1, 10, 100, 1000, 10000]
