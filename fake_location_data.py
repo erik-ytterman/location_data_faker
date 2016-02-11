@@ -24,74 +24,86 @@ def random_userdata(n):
         num += 1
  
 if __name__ == "__main__":
+    # Configure
+    user_populations = [1, 10, 100, 1000, 10000]
+    user_tuples = 100000
+
     # Create faker from factory with default locale
     fake = Factory.create("")
 
-    # Set the timespan for epoch timestamps
-    start = int(time.mktime(time.strptime("2016-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")))
-    end = int(time.time())
-
-    # Generate the population of (10000) fake users and devices
-    usersdata = [ userhash for userhash in random_userdata(10000) ]
-
-    # Construct byte array with gzip file content, according to RFC 1952, start with header
-    filename = "%d-%s-location.json.gz" % (end, time.strftime('%Y%m%d%H%M%S', time.localtime(end)))
-    compressor = zlib.compressobj(9, zlib.DEFLATED, -zlib.MAX_WBITS, zlib.DEF_MEM_LEVEL, 0)
-
-    zipfname = os.path.splitext(filename)[0]
-    zipfname = zipfname.encode('latin-1')
-
-    zipdata = bytearray()
-    zipdata += b'\x1f\x8b'
-    zipdata += b'\x08'   
-    zipdata += b'\x08'
-    zipdata += b'\x00\x00\x00\x00'
-    zipdata += b'\x02'   
-    zipdata += b'\x255'
-    zipdata += zipfname
-    zipdata += b'\x00'
-    
-    print("Creating: " + zipfname.decode('utf-8'))
-
-    # Generate 1 tuples
-    buffer = []
-    for i in range(1):
-        # Create tuple data
-        T = OrderedDict()
-        T['timestamp'] = random.randrange(start, end)
-        T['recordtype'] = "location"
+    for user_population in user_populations:
+        # Generate the population of (10000) fake users and devices
+        usersdata = [ userhash for userhash in random_userdata(user_population) ]
         
-        userdata = random.choice(usersdata)
-        T['userid'] = userdata['userid']
-        T['deviceid'] = userdata['deviceid']
-        T['usercategory'] = 1
+        # Set the timespan for epoch timestamps
+        start = int(time.mktime(time.strptime("2016-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")))
+        now = int(time.time())
 
-        T['geosource'] = "GPS"
-        T['latitude'] = float(fake.latitude())
-        T['longitude'] = float(fake.latitude())
-        T['accuracy'] = int(random.randrange(0,1000))
-        T['age'] = int(random.randrange(0,3600))
+        # Construct byte array with gzip file content, according to RFC 1952, start with header
+        filename = "%d-%s-location-%.5d-users.json.gz" % (now, 
+                                                          time.strftime('%Y%m%d%H%M%S', time.localtime(now)), 
+                                                          user_population)
         
-        # Write data
-        # dumpfile.write(json.dumps(T) + '\n')
-        linedata = json.dumps(T) + '\n'
-        buffer.append(linedata)
-        print(linedata)
+        zipfname = os.path.splitext(filename)[0]
+        zipfname = zipfname.encode('latin-1')
 
-    indata = bytes(''.join(buffer), 'UTF-8')
-    outdata = bytearray()
-    outdata += compressor.compress(indata)
-    outdata += compressor.flush()
-    
-    print(len(indata), "=>", len(outdata))
-    print("%d%%" % (len(outdata) * 100 / len(indata)))
+        zipdata = bytearray()
+        zipdata += b'\x1f\x8b'
+        zipdata += b'\x08'   
+        zipdata += b'\x08'
+        zipdata += b'\x00\x00\x00\x00'
+        zipdata += b'\x02'   
+        zipdata += b'\x255'
+        zipdata += zipfname
+        zipdata += b'\x00'
 
-    zipdata += outdata
-    zipdata += zlib.crc32(indata).to_bytes(4, byteorder='little')
-    zipdata += len(indata).to_bytes(4, byteorder='little')
-    
-    zipfile = open(filename, 'wb+')
-    zipfile.write(zipdata)
-    zipfile.close()
+        # Generate tuples
+        buffer = []
+        for i in range(user_tuples):
+            # Create tuple data
+            T = OrderedDict()
+            T['timestamp'] = random.randrange(start, now)
+            T['recordtype'] = "location"
+            
+            userdata = random.choice(usersdata)
+            T['userid'] = userdata['userid']
+            T['deviceid'] = userdata['deviceid']
+            T['usercategory'] = 1
+            
+            T['geosource'] = "GPS"
+            T['latitude'] = float(fake.latitude())
+            T['longitude'] = float(fake.latitude())
+            T['accuracy'] = int(random.randrange(0,1000))
+            T['age'] = int(random.randrange(0,3600))
+            
+            # Write data
+            linedata = json.dumps(T) + '\n'
+            buffer.append(linedata)
+            
+        indata = bytes(''.join(buffer), 'UTF-8')
+            
+        outdata = bytearray()
+        compressor = zlib.compressobj(9, zlib.DEFLATED, -zlib.MAX_WBITS, zlib.DEF_MEM_LEVEL, 0)
+        outdata += compressor.compress(indata)
+        outdata += compressor.flush()
+        zipdata += outdata
+            
+        zipdata += zlib.crc32(indata).to_bytes(4, byteorder='little')
+            
+        zipdata += len(indata).to_bytes(4, byteorder='little')
+
+        print("USERS: %5d OBJECT: %s IN: %d OUT: %d => %d%%" % (user_population,
+                                                                zipfname.decode('utf-8'), 
+                                                                len(indata), 
+                                                                len(outdata), 
+                                                                (len(outdata) * 100 / len(indata))))
+            
+        zipfile = open(os.path.join('outdata', filename), 'wb+')
+        zipfile.write(zipdata)
+        zipfile.close()
+            
+        jsonfile = open(os.path.join('outdata', zipfname.decode('utf-8')), 'wb+')
+        jsonfile.write(indata)
+        jsonfile.close()
 
     
