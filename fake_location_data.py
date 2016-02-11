@@ -26,7 +26,7 @@ def random_userdata(n):
 if __name__ == "__main__":
     # Configure
     user_populations = [1, 10, 100, 1000, 10000]
-    user_tuples = 100000
+    user_tuples = 120000
 
     # Create faker from factory with default locale
     fake = Factory.create("")
@@ -102,7 +102,7 @@ if __name__ == "__main__":
         zipfile.write(zipdata)
         zipfile.close()
             
-        jsonfile = open(os.path.join('outdata', zipfname.decode('utf-8')), 'wb+')
+        jsonfile = open(os.path.join('outdata', (zipfname.decode('latin-1')+ '.bak')), 'wb+')
         jsonfile.write(indata)
         jsonfile.close()
 
