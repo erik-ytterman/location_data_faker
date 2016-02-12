@@ -1,6 +1,7 @@
 #! /usr/bin/python3
  
 import os
+import sys
 import time
 import datetime
 import random
@@ -68,6 +69,8 @@ if __name__ == "__main__":
 
         # Generate tuples
         buffer = []
+        tuple_count = 0
+
         for i in range(user_tuples):
             # Create tuple data
             T = OrderedDict()
@@ -88,7 +91,16 @@ if __name__ == "__main__":
             # Write data
             linedata = json.dumps(T) + '\n'
             buffer.append(linedata)
-        
+
+            # Keep-alive output
+            tuple_count += 1
+            if((tuple_count % 100000) == 0):
+                sys.stdout.write('.')
+                sys.stdout.flush()
+
+        # Keep-alive output termination
+        sys.stdout.write('\n')
+
         # Create byte array with zipped payload data
         indata = bytes(''.join(buffer), 'UTF-8')
             
