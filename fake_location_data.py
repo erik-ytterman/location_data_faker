@@ -2,6 +2,7 @@
  
 import os
 import time
+import datetime
 import random
 
 import zlib
@@ -10,6 +11,8 @@ import base64
 
 import codecs
 import json
+
+import boto3
 
 from faker import Factory
 from collections import OrderedDict
@@ -26,11 +29,14 @@ def random_userdata(n):
 # Code partially inspired by http://www.opensource.apple.com/source/python/python-3/python/Lib/gzip.py
 if __name__ == "__main__":
     # Configure
-    user_populations = [1, 10, 100, 1000, 10000]
-    user_tuples = 120000
+    user_populations = [1, 10, 100, 1000, 10000, 100000]
+    user_tuples = 1200000
 
     # Create faker from factory with default locale
     fake = Factory.create("")
+
+    # Create AWS S3 client
+    s3client = boto3.client('s3')
 
     for user_population in user_populations:
         # Generate the population of (10000) fake users and devices
@@ -45,9 +51,11 @@ if __name__ == "__main__":
                                                           time.strftime('%Y%m%d%H%M%S', time.localtime(now)), 
                                                           user_population)
         
+        # Encode filename
         zipfname = os.path.splitext(filename)[0]
         zipfname = zipfname.encode('latin-1')
 
+        # Create GZIP header
         zipdata = bytearray()
         zipdata += b'\x1f\x8b'
         zipdata += b'\x08'   
@@ -80,31 +88,51 @@ if __name__ == "__main__":
             # Write data
             linedata = json.dumps(T) + '\n'
             buffer.append(linedata)
-            
+        
+        # Create byte array with zipped payload data
         indata = bytes(''.join(buffer), 'UTF-8')
             
+        # Compress payload data
         outdata = bytearray()
-        compressor = zlib.compressobj(9, zlib.DEFLATED, -zlib.MAX_WBITS, zlib.DEF_MEM_LEVEL, 0)
+        compressor = zlib.compressobj(zlib.Z_BEST_COMPRESSION, zlib.DEFLATED, -zlib.MAX_WBITS, zlib.DEF_MEM_LEVEL, 0)
         outdata += compressor.compress(indata)
         outdata += compressor.flush()
         zipdata += outdata
-            
+
+        # Calculate CRC for indata
         zipdata += zlib.crc32(indata).to_bytes(4, byteorder='little')
-            
+
+        # Calculate length of indata    
         zipdata += len(indata).to_bytes(4, byteorder='little')
 
-        print("USERS: %5d OBJECT: %s IN: %d OUT: %d => %d%%" % (user_population,
-                                                                zipfname.decode('utf-8'), 
-                                                                len(indata), 
-                                                                len(outdata), 
-                                                                (len(outdata) * 100 / len(indata))))
-            
-        zipfile = open(os.path.join('outdata', filename), 'wb+')
-        zipfile.write(zipdata)
-        zipfile.close()
-            
+        # Dump indata and gzip 'file' to disk
         jsonfile = open(os.path.join('outdata', (zipfname.decode('latin-1')+ '.bak')), 'wb+')
         jsonfile.write(indata)
         jsonfile.close()
 
-    
+        zipfile = open(os.path.join('outdata', filename), 'wb+')
+        zipfile.write(zipdata)
+        zipfile.close()
+        
+        # Transfer file to S3
+        starttime = datetime.datetime.now()
+        s3client.upload_file(os.path.join('outdata', filename), 'phaseshift.testbucket', 'remote-' + filename)
+        endtime = datetime.datetime.now()
+
+        # Calculate KPI's and S3 transfer properties
+        insize = float(len(indata))
+        outsize = float(len(outdata))
+        datasize = len(zipdata)        
+        delta = (endtime - starttime).total_seconds()
+        rate = datasize / delta
+        vrate = insize / delta
+
+        print("USERS: %5d OBJECT: %s IN: %.1e OUT: %.1e ~> %d%% BYTES: %d TIME: %.3f RATE: %.2e VRATE: %.2e" % (user_population,
+                                                                                                                zipfname.decode('utf-8'), 
+                                                                                                                insize, 
+                                                                                                                outsize, 
+                                                                                                                (len(outdata) * 100 / len(indata)),
+                                                                                                                datasize, 
+                                                                                                                delta, 
+                                                                                                                rate, 
+                                                                                                                vrate))
