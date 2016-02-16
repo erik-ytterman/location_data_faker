@@ -37,7 +37,8 @@ if __name__ == "__main__":
     fake = Factory.create("")
 
     # Create AWS S3 client
-    s3client = boto3.client('s3')
+    # s3client = boto3.client('s3', region_name = 'eu-central-1')
+    s3client = boto3.client('s3', region_name = 'us-east-1')
 
     for user_population in user_populations:
         # Generate the population of (10000) fake users and devices
@@ -128,7 +129,7 @@ if __name__ == "__main__":
         
         # Transfer file to S3
         starttime = datetime.datetime.now()
-        s3client.upload_file(os.path.join('outdata', filename), 'phaseshift.testbucket', 'remote-' + filename)
+        s3client.upload_file(os.path.join('outdata', filename), 'com.gfk.lps.bst', 'data/input/test/' + 'remote-' + filename)
         endtime = datetime.datetime.now()
 
         # Calculate KPI's and S3 transfer properties
